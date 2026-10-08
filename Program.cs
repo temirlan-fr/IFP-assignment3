@@ -1,5 +1,6 @@
 ﻿using ColdChainMonitor.Importing;
 using ColdChainMonitor.Models;
+using ColdChainMonitor.Analysis;
 
 ImportResult result;
 
@@ -28,5 +29,20 @@ foreach (var error in result.Errors)
 {
     Console.WriteLine($"Line {error.LineNumber}: {error.Message}");
     Console.WriteLine($"Raw: {error.RawLine}");
+    Console.WriteLine();
+}
+
+var alerts = ReadingAnalyzer.Analyze(result.Readings);
+
+Console.WriteLine("ALERTS");
+Console.WriteLine($"Total alerts: {alerts.Count}");
+
+foreach (var alert in alerts)
+{
+    Console.WriteLine(FormattableString.Invariant(
+        $"{alert.SensorId} | {alert.Timestamp:HH:mm} UTC | {alert.Temperature:F1} C"));
+
+    Console.WriteLine($"Outside range: {alert.IsOutsideRange}");
+    Console.WriteLine($"Abrupt change: {alert.IsAbruptChange}");
     Console.WriteLine();
 }
