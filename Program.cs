@@ -1,31 +1,32 @@
-﻿using ColdChainMonitor.Parsing;
+﻿using ColdChainMonitor.Importing;
+using ColdChainMonitor.Models;
 
-string[] examples =
+ImportResult result;
+
+using (FileStream input = File.OpenRead("readings.txt"))
 {
-    "S1|2026-09-22T08:10:00Z|Cold|5.2",
-    "S3|bad-date|Cold|3.5",
-    "S2|2026-09-22T08:11:00Z|99|-17.0",
-    "S1|2026-09-22T08:20:00Z|Cold|5,5"
-};
+    result = ReadingImporter.ReadReadings(input);
+}
 
-foreach (string line in examples)
+Console.WriteLine("Cold Chain Monitor");
+Console.WriteLine($"Valid readings: {result.Readings.Count}");
+Console.WriteLine($"Import errors: {result.Errors.Count}");
+
+Console.WriteLine();
+Console.WriteLine("VALID READINGS");
+
+foreach (var reading in result.Readings)
 {
-    Console.WriteLine($"Input: {line}");
+    Console.WriteLine(FormattableString.Invariant(
+        $"{reading.SensorId} | {reading.Timestamp:yyyy-MM-dd'T'HH:mm:ss'Z'} | {reading.StorageClass} | {reading.Temperature:F1}"));
+}
 
-    bool success = ReadingParser.TryParseReading(
-        line,
-        out var reading,
-        out var error);
+Console.WriteLine();
+Console.WriteLine("IMPORT ERRORS");
 
-    if (success && reading is not null)
-    {
-        Console.WriteLine(FormattableString.Invariant(
-            $"OK: {reading.SensorId}, {reading.StorageClass}, {reading.Temperature} C"));
-    }
-    else
-    {
-        Console.WriteLine($"ERROR: {error}");
-    }
-
+foreach (var error in result.Errors)
+{
+    Console.WriteLine($"Line {error.LineNumber}: {error.Message}");
+    Console.WriteLine($"Raw: {error.RawLine}");
     Console.WriteLine();
 }
