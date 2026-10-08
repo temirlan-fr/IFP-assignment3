@@ -1,6 +1,7 @@
 ﻿using ColdChainMonitor.Importing;
 using ColdChainMonitor.Models;
 using ColdChainMonitor.Analysis;
+using ColdChainMonitor.Serialization;
 
 ImportResult result;
 
@@ -45,4 +46,58 @@ foreach (var alert in alerts)
     Console.WriteLine($"Outside range: {alert.IsOutsideRange}");
     Console.WriteLine($"Abrupt change: {alert.IsAbruptChange}");
     Console.WriteLine();
+}
+
+var archive = new MonitoringArchive(
+    createdAtUtc: DateTimeOffset.UtcNow,
+    readings: result.Readings,
+    errors: result.Errors,
+    alerts: alerts);
+
+using (FileStream output = File.Create("archive.json"))
+{
+    ArchiveSerializer.WriteArchive(output, archive);
+}
+
+Console.WriteLine("Archive saved to archive.json.");
+
+MonitoringArchive restoredFromFile;
+
+using (FileStream input = File.OpenRead("archive.json"))
+{
+    restoredFromFile = ArchiveSerializer.ReadArchive(input);
+}
+
+bool fileRoundTripIsValid = ArchiveComparer.HaveSameValues(
+    archive,
+    restoredFromFile);
+
+if (!fileRoundTripIsValid)
+{
+    throw new InvalidOperationException(
+        "File round trip changed archive values.");
+}
+
+Console.WriteLine("File round trip: OK");
+
+using (var memory = new MemoryStream())
+{
+    ArchiveSerializer.WriteArchive(memory, archive);
+
+    memory.Position = 0;
+
+    MonitoringArchive restoredFromMemory =
+        ArchiveSerializer.ReadArchive(memory);
+
+    bool memoryRoundTripIsValid = ArchiveComparer.HaveSameValues(
+        archive,
+        restoredFromMemory);
+
+    if (!memoryRoundTripIsValid)
+    {
+        throw new InvalidOperationException(
+            "Memory round trip changed archive values.");
+    }
+
+    Console.WriteLine("Memory round trip: OK");
 }
